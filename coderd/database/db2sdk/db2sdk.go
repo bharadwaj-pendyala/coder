@@ -30,6 +30,7 @@ import (
 	"github.com/coder/coder/v2/coderd/workspaceapps/appurl"
 	"github.com/coder/coder/v2/coderd/x/chatd/chatprompt"
 	"github.com/coder/coder/v2/codersdk"
+	"github.com/coder/coder/v2/codersdk/agentsdk"
 	"github.com/coder/coder/v2/provisionersdk/proto"
 	"github.com/coder/coder/v2/tailnet"
 	previewtypes "github.com/coder/preview/types"
@@ -1002,23 +1003,19 @@ func ChatRoleActions(role codersdk.ChatRole) []policy.Action {
 	return []policy.Action{}
 }
 
-// ConnectionLogKindFromAgentProtoConnectionType returns the kind and app of an
-// agent connection. The enum holds only families, which are also registered
-// app names.
-func ConnectionLogKindFromAgentProtoConnectionType(typ agentproto.Connection_Type) (kind database.ConnectionKind, appName string, err error) {
-	switch typ {
-	case agentproto.Connection_SSH:
-		return database.ConnectionKindSSH, string(codersdk.AppFamilySSH), nil
-	case agentproto.Connection_JETBRAINS:
-		return database.ConnectionKindSSH, string(codersdk.AppFamilyJetBrains), nil
-	case agentproto.Connection_VSCODE:
-		return database.ConnectionKindSSH, string(codersdk.AppFamilyVSCode), nil
-	case agentproto.Connection_RECONNECTING_PTY:
-		return database.ConnectionKindReconnectingPTY, string(codersdk.AppFamilyReconnectingPTY), nil
-	default:
-		// Also Connection_TYPE_UNSPECIFIED, no mapping.
-		return "", "", xerrors.Errorf("unknown agent connection type %q", typ)
+// ConnectionLogKindFromAgentProto returns the kind and app of an agent
+// connection. An agent that sends no app name reports only a family, which is
+// also a registered app name.
+func ConnectionLogKindFromAgentProto(conn *agentproto.Connection) (kind database.ConnectionKind, appName string, err error) {
+	kind = database.ConnectionKindSSH
+	if conn.GetType() == agentproto.Connection_RECONNECTING_PTY {
+		kind = database.ConnectionKindReconnectingPTY
 	}
+	if appName := conn.GetAppName(); appName != "" {
+		return kind, codersdk.NormalizeAppName(appName), nil
+	}
+	family, err := agentsdk.AppFamilyFromProto(conn.GetType())
+	return kind, string(family), err
 }
 
 func ConnectionLogStatusFromAgentProtoConnectionAction(action agentproto.Connection_Action) (database.ConnectionStatus, error) {
