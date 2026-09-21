@@ -19778,6 +19778,11 @@ const docTemplate = `{
                 "title_source": {
                     "$ref": "#/definitions/codersdk.ChatTitleSource"
                 },
+                "title_updated_at": {
+                    "description": "TitleUpdatedAt orders title changes. Title writes do not change\nUpdatedAt.",
+                    "type": "string",
+                    "format": "date-time"
+                },
                 "updated_at": {
                     "type": "string",
                     "format": "date-time"
@@ -21598,7 +21603,6 @@ const docTemplate = `{
                 "deleted",
                 "diff_status_change",
                 "action_required",
-                "cost_change",
                 "context_dirty"
             ],
             "x-enum-varnames": [
@@ -21610,7 +21614,6 @@ const docTemplate = `{
                 "ChatWatchEventKindDeleted",
                 "ChatWatchEventKindDiffStatusChange",
                 "ChatWatchEventKindActionRequired",
-                "ChatWatchEventKindCostChange",
                 "ChatWatchEventKindContextDirty"
             ]
         },
@@ -22016,7 +22019,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "title": {
-                    "description": "Title, when set, is trimmed and stored as the user title; automatic\ntitle generation is skipped. When omitted, the title is derived from\nthe first prompt and later replaced by a generated title.",
+                    "description": "Title, when set, is stored as the user title and automatic title\ngeneration does not run. It is trimmed of surrounding whitespace and\nmust then be non-empty and at most MaxChatTitleRunes characters;\notherwise the request is rejected with 400. When omitted, the title\nis derived from the first prompt and may later be replaced by a\ngenerated title.",
                     "type": "string"
                 },
                 "unsafe_dynamic_tools": {
@@ -29837,6 +29840,7 @@ const docTemplate = `{
                     ]
                 },
                 "title": {
+                    "description": "Title, when set, is stored as the user title even when its text is\nunchanged, so a generated title never replaces it afterwards. It is\nvalidated like CreateChatRequest.Title.",
                     "type": "string"
                 },
                 "workspace_id": {
