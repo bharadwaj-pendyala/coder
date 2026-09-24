@@ -17,7 +17,6 @@ import (
 	"github.com/coder/coder/v2/coderd/database/dbgen"
 	"github.com/coder/coder/v2/coderd/database/dbtestutil"
 	"github.com/coder/coder/v2/coderd/database/dbtime"
-	"github.com/coder/coder/v2/codersdk"
 	"github.com/coder/coder/v2/enterprise/coderd/connectionlog"
 	"github.com/coder/coder/v2/testutil"
 	"github.com/coder/quartz"
@@ -80,7 +79,7 @@ func TestDBBackendIntegration(t *testing.T) {
 			WorkspaceID:      ws.ID,
 			WorkspaceName:    ws.Name,
 			AgentName:        "main",
-			Type:             string(codersdk.ConnectionTypeSSH),
+			Kind:             database.ConnectionKindSSH,
 			ConnectionID:     uuid.NullUUID{UUID: connID, Valid: true},
 			ConnectionStatus: database.ConnectionStatusConnected,
 			IP:               testIP(),
@@ -127,7 +126,7 @@ func TestDBBackendIntegration(t *testing.T) {
 			WorkspaceID:      ws.ID,
 			WorkspaceName:    ws.Name,
 			AgentName:        "main",
-			Type:             string(codersdk.ConnectionTypeSSH),
+			Kind:             database.ConnectionKindSSH,
 			ConnectionID:     uuid.NullUUID{UUID: connID, Valid: true},
 			ConnectionStatus: database.ConnectionStatusConnected,
 			IP:               testIP(),
@@ -151,7 +150,7 @@ func TestDBBackendIntegration(t *testing.T) {
 			WorkspaceID:      ws.ID,
 			WorkspaceName:    ws.Name,
 			AgentName:        "main",
-			Type:             string(codersdk.ConnectionTypeSSH),
+			Kind:             database.ConnectionKindSSH,
 			ConnectionID:     uuid.NullUUID{UUID: connID, Valid: true},
 			ConnectionStatus: database.ConnectionStatusDisconnected,
 			Code:             sql.NullInt32{Int32: 0, Valid: true},
@@ -200,7 +199,7 @@ func TestDBBackendIntegration(t *testing.T) {
 			WorkspaceID:      ws.ID,
 			WorkspaceName:    ws.Name,
 			AgentName:        "main",
-			Type:             string(codersdk.ConnectionTypeSSH),
+			Kind:             database.ConnectionKindSSH,
 			ConnectionID:     uuid.NullUUID{UUID: connID, Valid: true},
 			ConnectionStatus: database.ConnectionStatusConnected,
 			IP:               testIP(),
@@ -215,7 +214,7 @@ func TestDBBackendIntegration(t *testing.T) {
 			WorkspaceID:      ws.ID,
 			WorkspaceName:    ws.Name,
 			AgentName:        "main",
-			Type:             string(codersdk.ConnectionTypeSSH),
+			Kind:             database.ConnectionKindSSH,
 			ConnectionID:     uuid.NullUUID{UUID: connID, Valid: true},
 			ConnectionStatus: database.ConnectionStatusDisconnected,
 			Code:             sql.NullInt32{Int32: 0, Valid: true},
@@ -264,7 +263,7 @@ func TestDBBackendIntegration(t *testing.T) {
 				WorkspaceID:      ws.ID,
 				WorkspaceName:    ws.Name,
 				AgentName:        "main",
-				Type:             string(codersdk.ConnectionTypeSSH),
+				Kind:             database.ConnectionKindSSH,
 				ConnectionID:     uuid.NullUUID{UUID: uuid.New(), Valid: true},
 				ConnectionStatus: database.ConnectionStatusConnected,
 				IP:               testIP(),
@@ -309,7 +308,7 @@ func TestDBBackendIntegration(t *testing.T) {
 				WorkspaceID:      ws.ID,
 				WorkspaceName:    ws.Name,
 				AgentName:        "main",
-				Type:             string(codersdk.ConnectionTypeWorkspaceApp),
+				Kind:             database.ConnectionKindWorkspaceApp,
 				ConnectionID:     uuid.NullUUID{},
 				ConnectionStatus: database.ConnectionStatusConnected,
 				IP:               testIP(),
@@ -352,7 +351,7 @@ func TestDBBackendIntegration(t *testing.T) {
 			WorkspaceID:      ws.ID,
 			WorkspaceName:    ws.Name,
 			AgentName:        "main",
-			Type:             string(codersdk.ConnectionTypeSSH),
+			Kind:             database.ConnectionKindSSH,
 			ConnectionID:     uuid.NullUUID{UUID: uuid.New(), Valid: true},
 			ConnectionStatus: database.ConnectionStatusConnected,
 			IP:               testIP(),

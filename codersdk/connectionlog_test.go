@@ -11,90 +11,65 @@ import (
 	"github.com/coder/coder/v2/codersdk"
 )
 
-func TestConnectionTypeMatchingTypes(t *testing.T) {
-	t.Parallel()
-
-	for _, tc := range []struct {
-		name string
-		typ  codersdk.ConnectionType
-		want []string
-	}{
-		{"FamilyMatchesItsApps", codersdk.ConnectionTypeJetBrains, []string{"jetbrains"}},
-		{"SSHFamilyCoversZed", codersdk.ConnectionTypeSSH, []string{"ssh", "zed"}},
-		{"WebTypeMatchesItself", codersdk.ConnectionTypeTunnel, []string{"tunnel"}},
-		{"UnknownMatchesByExclusion", codersdk.ConnectionTypeUnknown, nil},
-		{"AppNameIsNotAFamily", "cursor", nil},
-		{"Unrecognized", "no_such_type", nil},
-		{"Empty", "", nil},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			require.Equal(t, tc.want, tc.typ.MatchingTypes())
-		})
-	}
-
-	// The VS Code family grows as forks are registered, so pin the behavior
-	// rather than the list.
-	vscode := codersdk.ConnectionTypeVSCode.MatchingTypes()
-	require.Contains(t, vscode, "vscode")
-	require.Contains(t, vscode, "cursor")
-	require.NotContains(t, vscode, "jetbrains")
-}
-
-func TestConnectionLogTypeDisplayName(t *testing.T) {
+func TestConnectionTypeOfApp(t *testing.T) {
 	t.Parallel()
 
 	for _, tc := range []struct {
 		name    string
-		logType string
-		want    string
+		appName string
+		want    codersdk.ConnectionType
 	}{
-		{"AppNamedLikeItsFamily", "vscode", "VS Code"},
-		{"WebType", "workspace_app", "Workspace App"},
-		{"App", "cursor", "Cursor"},
-		{"AppKeepsItsPunctuation", "code_server", "code-server"},
-		{"UnregisteredAppPresentsAsItself", "an_unregistered_ide", "an_unregistered_ide"},
-		{"Unknown", "unknown", "Unknown"},
+		{"App", "cursor", codersdk.ConnectionTypeVSCode},
+		{"AppNamedLikeItsFamily", "jetbrains", codersdk.ConnectionTypeJetBrains},
+		{"Normalized", "Code-Server", codersdk.ConnectionTypeVSCode},
+		{"Unregistered", "an_unregistered_ide", codersdk.ConnectionTypeUnknown},
+		// Clients pick their own names, so this is just an unregistered app.
+		{"WebTypeName", "tunnel", codersdk.ConnectionTypeUnknown},
+		{"SFTP", "sftp", codersdk.ConnectionTypeUnknown},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tc.want, codersdk.ConnectionLogTypeDisplayName(tc.logType))
+			require.Equal(t, tc.want, codersdk.ConnectionTypeOfApp(tc.appName))
 		})
 	}
+}
+
+func TestConnectionTypeAppNames(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, []string{"jetbrains"}, codersdk.ConnectionTypeJetBrains.AppNames())
+	require.Equal(t, []string{"ssh", "zed"}, codersdk.ConnectionTypeSSH.AppNames())
+	require.Empty(t, codersdk.ConnectionTypeTunnel.AppNames())
+	require.Empty(t, codersdk.ConnectionTypeUnknown.AppNames())
+	require.Empty(t, codersdk.ConnectionType("cursor").AppNames())
+
+	// The VS Code family grows, so check membership rather than the list.
+	vscode := codersdk.ConnectionTypeVSCode.AppNames()
+	require.Contains(t, vscode, "vscode")
+	require.Contains(t, vscode, "cursor")
+	require.NotContains(t, vscode, "jetbrains")
+
+	known := codersdk.KnownConnectionAppNames()
+	require.Contains(t, known, "cursor")
+	require.NotContains(t, known, "sftp")
 }
 
 func TestConnectionTypeDisplayName(t *testing.T) {
 	t.Parallel()
 
-	require.Equal(t, "Visual Studio Code", codersdk.ConnectionTypeVSCode.DisplayName())
-	require.Equal(t, "JetBrains", codersdk.ConnectionTypeJetBrains.DisplayName())
-	require.Equal(t, "Workspace App", codersdk.ConnectionTypeWorkspaceApp.DisplayName())
-}
-
-func TestConnectionLogTypeFamily(t *testing.T) {
-	t.Parallel()
-
-	for _, tc := range []struct {
-		name    string
-		logType string
-		want    codersdk.ConnectionType
-	}{
-		{"App", "cursor", codersdk.ConnectionTypeVSCode},
-		{"Family", "jetbrains", codersdk.ConnectionTypeJetBrains},
-		{"WebType", "port_forwarding", codersdk.ConnectionTypePortForwarding},
-		{"UnregisteredApp", "an_unregistered_ide", codersdk.ConnectionTypeUnknown},
-		{"UnfilterableFamily", "sftp", codersdk.ConnectionTypeUnknown},
+	for typ, want := range map[codersdk.ConnectionType]string{
+		codersdk.ConnectionTypeVSCode:          "Visual Studio Code",
+		codersdk.ConnectionTypeJetBrains:       "JetBrains",
+		codersdk.ConnectionTypeReconnectingPTY: "Web Terminal",
+		codersdk.ConnectionTypeWorkspaceApp:    "Workspace App",
+		codersdk.ConnectionTypeUnknown:         "Unknown",
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			require.Equal(t, tc.want, codersdk.ConnectionLogTypeFamily(tc.logType))
-		})
+		require.Equal(t, want, typ.DisplayName(), typ)
 	}
 }
 
-// Pins the ConnectionType constants, read from source, to
-// FilterableConnectionTypes.
-func TestConnectionTypesCoverFilterableTypes(t *testing.T) {
+// Each registry family needs a ConnectionType constant with a display name.
+func TestConnectionTypeConstantsMatchRegistry(t *testing.T) {
 	t.Parallel()
 
 	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedTypes}, ".")
@@ -114,13 +89,8 @@ func TestConnectionTypesCoverFilterableTypes(t *testing.T) {
 
 	for _, typ := range declared {
 		require.NotEqual(t, string(typ), typ.DisplayName(), "ConnectionType %q has no display name", typ)
-		if typ != codersdk.ConnectionTypeUnknown {
-			require.NotEmpty(t, typ.MatchingTypes(), "ConnectionType %q matches nothing", typ)
+		if typ != codersdk.ConnectionTypeUnknown && !typ.IsWeb() {
+			require.NotEmpty(t, typ.AppNames(), "ConnectionType %q has no app", typ)
 		}
-	}
-
-	// Unknown matches by exclusion, so no stored value may resolve to it.
-	for _, logType := range codersdk.KnownConnectionLogTypes() {
-		require.NotEqual(t, codersdk.ConnectionTypeUnknown, codersdk.ConnectionLogTypeFamily(logType), logType)
 	}
 }

@@ -56,7 +56,7 @@ func TestConnectionLogs(t *testing.T) {
 
 		ws := createWorkspace(t, db)
 		_ = dbgen.ConnectionLog(t, db, database.UpsertConnectionLogParams{
-			Type:             string(codersdk.ConnectionTypeSSH),
+			Kind:             database.ConnectionKindSSH,
 			WorkspaceID:      ws.ID,
 			OrganizationID:   ws.OrganizationID,
 			WorkspaceOwnerID: ws.OwnerID,
@@ -67,13 +67,13 @@ func TestConnectionLogs(t *testing.T) {
 
 		require.Len(t, logs.ConnectionLogs, 1)
 		require.EqualValues(t, 1, logs.Count)
-		require.Equal(t, string(codersdk.ConnectionTypeSSH), logs.ConnectionLogs[0].Type)
-		require.Equal(t, "SSH", logs.ConnectionLogs[0].TypeDisplayName)
+		require.Equal(t, codersdk.ConnectionTypeSSH, logs.ConnectionLogs[0].Type)
+		require.Equal(t, "ssh", logs.ConnectionLogs[0].AppName)
+		require.Equal(t, "SSH", logs.ConnectionLogs[0].AppDisplayName)
 	})
 
-	// An IDE the enum could not hold survives the round trip, presents by
-	// its registry name, and answers a filter on its family.
-	t.Run("PerIDEType", func(t *testing.T) {
+	// Type groups apps by family, including older rows without an app name.
+	t.Run("AppName", func(t *testing.T) {
 		t.Parallel()
 
 		ctx := context.Background()
@@ -88,25 +88,49 @@ func TestConnectionLogs(t *testing.T) {
 		})
 
 		ws := createWorkspace(t, db)
-		_ = dbgen.ConnectionLog(t, db, database.UpsertConnectionLogParams{
-			Type:             "cursor",
-			WorkspaceID:      ws.ID,
-			OrganizationID:   ws.OrganizationID,
-			WorkspaceOwnerID: ws.OwnerID,
-			ConnectionID:     uuid.NullUUID{UUID: uuid.New(), Valid: true},
-		})
+		insert := func(kind database.ConnectionKind, appNameOrPort string) {
+			_ = dbgen.ConnectionLog(t, db, database.UpsertConnectionLogParams{
+				Kind:             kind,
+				AppNameOrPort:    sql.NullString{String: appNameOrPort, Valid: appNameOrPort != ""},
+				WorkspaceID:      ws.ID,
+				OrganizationID:   ws.OrganizationID,
+				WorkspaceOwnerID: ws.OwnerID,
+				ConnectionID:     uuid.NullUUID{UUID: uuid.New(), Valid: kind == database.ConnectionKindSSH || kind == database.ConnectionKindVSCode},
+			})
+		}
+		insert(database.ConnectionKindSSH, "cursor")
+		insert(database.ConnectionKindVSCode, "")
+		// A workspace app slugged like an IDE is still a workspace app.
+		insert(database.ConnectionKindWorkspaceApp, "cursor")
+		insert(database.ConnectionKindPortForwarding, "8080")
 
-		logs, err := client.ConnectionLogs(ctx, codersdk.ConnectionLogsRequest{
-			SearchQuery: "type:vscode",
-		})
-		require.NoError(t, err)
+		type got struct {
+			Type           codersdk.ConnectionType
+			AppName        string
+			AppDisplayName string
+		}
+		query := func(q string) []got {
+			logs, err := client.ConnectionLogs(ctx, codersdk.ConnectionLogsRequest{SearchQuery: q})
+			require.NoError(t, err)
+			var out []got
+			for _, l := range logs.ConnectionLogs {
+				out = append(out, got{l.Type, l.AppName, l.AppDisplayName})
+			}
+			return out
+		}
 
-		require.Len(t, logs.ConnectionLogs, 1)
-		require.Equal(t, "cursor", logs.ConnectionLogs[0].Type)
-		require.Equal(t, "Cursor", logs.ConnectionLogs[0].TypeDisplayName)
-		require.Equal(t, codersdk.ConnectionTypeVSCode, logs.ConnectionLogs[0].TypeFamily)
-		require.NotNil(t, logs.ConnectionLogs[0].SSHInfo)
-		require.Nil(t, logs.ConnectionLogs[0].WebInfo)
+		ide := got{codersdk.ConnectionTypeVSCode, "cursor", "Cursor"}
+		legacy := got{codersdk.ConnectionTypeVSCode, "vscode", "VS Code"}
+		webApp := got{codersdk.ConnectionTypeWorkspaceApp, "cursor", "cursor"}
+		port := got{codersdk.ConnectionTypePortForwarding, "", ""}
+
+		require.ElementsMatch(t, []got{ide, legacy, webApp, port}, query(""))
+		require.ElementsMatch(t, []got{ide, legacy}, query("type:vscode"))
+		require.ElementsMatch(t, []got{webApp}, query("type:workspace_app"))
+		require.ElementsMatch(t, []got{ide, webApp}, query("app:cursor"))
+		require.ElementsMatch(t, []got{legacy}, query("app:vscode"))
+		// A port is not an app.
+		require.Empty(t, query("app:8080"))
 	})
 
 	t.Run("Empty", func(t *testing.T) {
@@ -146,13 +170,13 @@ func TestConnectionLogs(t *testing.T) {
 		org := dbgen.Organization(t, db, database.Organization{})
 		ws := createWorkspace(t, db)
 		_ = dbgen.ConnectionLog(t, db, database.UpsertConnectionLogParams{
-			Type:             string(codersdk.ConnectionTypeSSH),
+			Kind:             database.ConnectionKindSSH,
 			WorkspaceID:      ws.ID,
 			OrganizationID:   org.ID,
 			WorkspaceOwnerID: ws.OwnerID,
 		})
 		_ = dbgen.ConnectionLog(t, db, database.UpsertConnectionLogParams{
-			Type:             string(codersdk.ConnectionTypeSSH),
+			Kind:             database.ConnectionKindSSH,
 			WorkspaceID:      ws.ID,
 			OrganizationID:   ws.OrganizationID,
 			WorkspaceOwnerID: ws.OwnerID,
@@ -197,14 +221,14 @@ func TestConnectionLogs(t *testing.T) {
 		ws := createWorkspace(t, db)
 		clog := dbgen.ConnectionLog(t, db, database.UpsertConnectionLogParams{
 			Time:             now.Add(-time.Hour),
-			Type:             string(codersdk.ConnectionTypeWorkspaceApp),
+			Kind:             database.ConnectionKindWorkspaceApp,
 			WorkspaceID:      ws.ID,
 			OrganizationID:   ws.OrganizationID,
 			WorkspaceOwnerID: ws.OwnerID,
 			ConnectionID:     uuid.NullUUID{UUID: connID, Valid: true},
 			UserAgent:        sql.NullString{String: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36", Valid: true},
 			UserID:           uuid.NullUUID{UUID: ws.OwnerID, Valid: true},
-			SlugOrPort:       sql.NullString{String: "code-server", Valid: true},
+			AppNameOrPort:    sql.NullString{String: "code-server", Valid: true},
 		})
 
 		logs, err := client.ConnectionLogs(ctx, codersdk.ConnectionLogsRequest{})
@@ -213,7 +237,7 @@ func TestConnectionLogs(t *testing.T) {
 		require.Len(t, logs.ConnectionLogs, 1)
 		require.EqualValues(t, 1, logs.Count)
 		require.NotNil(t, logs.ConnectionLogs[0].WebInfo)
-		require.Equal(t, clog.SlugOrPort.String, logs.ConnectionLogs[0].WebInfo.SlugOrPort)
+		require.Equal(t, clog.AppNameOrPort.String, logs.ConnectionLogs[0].WebInfo.SlugOrPort)
 		require.Equal(t, clog.UserAgent.String, logs.ConnectionLogs[0].WebInfo.UserAgent)
 		require.Equal(t, ws.OwnerID, logs.ConnectionLogs[0].WebInfo.User.ID)
 	})
@@ -238,7 +262,7 @@ func TestConnectionLogs(t *testing.T) {
 		// user's identity; they must surface it via WebInfo.
 		clog := dbgen.ConnectionLog(t, db, database.UpsertConnectionLogParams{
 			Time:             now.Add(-time.Hour),
-			Type:             string(codersdk.ConnectionTypeTunnel),
+			Kind:             database.ConnectionKindTunnel,
 			WorkspaceID:      ws.ID,
 			OrganizationID:   ws.OrganizationID,
 			WorkspaceOwnerID: ws.OwnerID,
@@ -279,7 +303,7 @@ func TestConnectionLogs(t *testing.T) {
 		ws := createWorkspace(t, db)
 		clog := dbgen.ConnectionLog(t, db, database.UpsertConnectionLogParams{
 			Time:             now.Add(-time.Hour),
-			Type:             string(codersdk.ConnectionTypeSSH),
+			Kind:             database.ConnectionKindSSH,
 			WorkspaceID:      ws.ID,
 			OrganizationID:   ws.OrganizationID,
 			WorkspaceOwnerID: ws.OwnerID,
@@ -300,7 +324,7 @@ func TestConnectionLogs(t *testing.T) {
 		updatedClog := dbgen.ConnectionLog(t, db, database.UpsertConnectionLogParams{
 			Time:             now,
 			OrganizationID:   clog.OrganizationID,
-			Type:             clog.Type,
+			Kind:             clog.Kind,
 			WorkspaceID:      clog.WorkspaceID,
 			WorkspaceOwnerID: clog.WorkspaceOwnerID,
 			WorkspaceName:    clog.WorkspaceName,
@@ -329,8 +353,7 @@ func TestConnectionLogs(t *testing.T) {
 		require.EqualValues(t, 1, logs.Count)
 		require.NotNil(t, logs.ConnectionLogs[0].SSHInfo)
 		require.Nil(t, logs.ConnectionLogs[0].WebInfo)
-		require.Equal(t, string(codersdk.ConnectionTypeSSH), logs.ConnectionLogs[0].Type)
-		require.Equal(t, "SSH", logs.ConnectionLogs[0].TypeDisplayName)
+		require.Equal(t, codersdk.ConnectionTypeSSH, logs.ConnectionLogs[0].Type)
 		require.Equal(t, clog.ConnectionID.UUID, logs.ConnectionLogs[0].SSHInfo.ConnectionID)
 		require.True(t, logs.ConnectionLogs[0].SSHInfo.DisconnectTime.Equal(now))
 		require.Equal(t, updatedClog.DisconnectReason.String, logs.ConnectionLogs[0].SSHInfo.DisconnectReason)

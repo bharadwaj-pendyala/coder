@@ -13,8 +13,8 @@ export const ConnectionLogDescription: FC<ConnectionLogDescriptionProps> = ({
 }) => {
 	const {
 		type,
-		type_display_name,
-		type_family,
+		app_name,
+		app_display_name,
 		workspace_owner_username,
 		workspace_name,
 		web_info,
@@ -102,13 +102,14 @@ export const ConnectionLogDescription: FC<ConnectionLogDescriptionProps> = ({
 		}
 
 		default: {
+			const typeName = connectionTypeDisplayNames[type];
 			return (
 				<span>
-					{type_display_name}{" "}
-					{type_family && type_family !== type && (
+					{app_display_name || typeName}{" "}
+					{app_name && app_name !== type && (
 						<>
 							<span className="text-xs text-content-secondary">
-								({connectionTypeDisplayNames[type_family]})
+								({typeName})
 							</span>{" "}
 						</>
 					)}

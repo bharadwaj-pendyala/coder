@@ -81,10 +81,11 @@ var sessionApps = map[string]sessionApp{
 func SessionCountApps(counts map[string]int64) map[string]SessionCountApp {
 	apps := make(map[string]SessionCountApp, len(counts))
 	for appName, count := range counts {
-		app := sessionApps[NormalizeAppName(appName)]
+		name := NormalizeAppName(appName)
+		app := sessionApps[name]
 		apps[appName] = SessionCountApp{
 			Count:       count,
-			DisplayName: AppDisplayName(appName),
+			DisplayName: cmp.Or(app.displayName, name),
 			Icon:        app.icon,
 			Family:      cmp.Or(app.family, AppFamilyUnknown),
 		}
@@ -141,24 +142,11 @@ func AppNameFamily(appName string) AppFamilyName {
 	return AppFamilyUnknown
 }
 
-// AppDisplayName is the registry's name for a known app, otherwise the
-// normalized identifier itself.
+// AppDisplayName is the registry name of appName, or the normalized name if
+// unregistered.
 func AppDisplayName(appName string) string {
 	appName = NormalizeAppName(appName)
 	return cmp.Or(sessionApps[appName].displayName, appName)
-}
-
-// AppNamesInFamily lists the registry's app names in a family, sorted. An
-// unknown family has none.
-func AppNamesInFamily(family AppFamilyName) []string {
-	var names []string
-	for appName, app := range sessionApps {
-		if app.family == family {
-			names = append(names, appName)
-		}
-	}
-	slices.Sort(names)
-	return names
 }
 
 // NormalizeAppName prepares a client-supplied app name for storage and

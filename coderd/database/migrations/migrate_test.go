@@ -4116,9 +4116,8 @@ func TestMigration000599OAuth2RedirectURIsPrimary(t *testing.T) {
 	assertRows()
 }
 
-// TestMigration000600ConnectionLogsTypeTextDown checks the fold back into
-// the families the enum holds.
-func TestMigration000600ConnectionLogsTypeTextDown(t *testing.T) {
+// The down migration folds app names into families and keeps web rows.
+func TestMigration000600ConnectionLogsKindAppNameDown(t *testing.T) {
 	t.Parallel()
 	if testing.Short() {
 		t.SkipNow()
@@ -4141,40 +4140,56 @@ func TestMigration000600ConnectionLogsTypeTextDown(t *testing.T) {
 		TemplateID:     tpl.ID,
 	})
 
-	folds := map[string]string{
-		"cursor":    "vscode",    // a registered app folds into its family
-		"zed":       "ssh",       // including one outside the VS Code family
-		"a_new_ide": "ssh",       // an app the snapshot predates
-		"jetbrains": "jetbrains", // a family passes through
-		"tunnel":    "tunnel",    // as does a type that never was an app
+	type row struct {
+		kind          database.ConnectionKind
+		appNameOrPort string
+	}
+	type want struct {
+		typ        string
+		slugOrPort sql.NullString
+	}
+	cases := map[string]struct {
+		row  row
+		want want
+	}{
+		"RegisteredApp":   {row{database.ConnectionKindSSH, "cursor"}, want{"vscode", sql.NullString{}}},
+		"FamilyNamedApp":  {row{database.ConnectionKindSSH, "jetbrains"}, want{"jetbrains", sql.NullString{}}},
+		"SSHFamilyApp":    {row{database.ConnectionKindSSH, "zed"}, want{"ssh", sql.NullString{}}},
+		"SnapshotPredate": {row{database.ConnectionKindSSH, "a_new_ide"}, want{"ssh", sql.NullString{}}},
+		"WebTerminal":     {row{database.ConnectionKindReconnectingPTY, "reconnecting_pty"}, want{"reconnecting_pty", sql.NullString{}}},
+		"WithoutAppName":  {row{database.ConnectionKindVSCode, ""}, want{"vscode", sql.NullString{}}},
+		"WorkspaceApp":    {row{database.ConnectionKindWorkspaceApp, "cursor"}, want{"workspace_app", sql.NullString{String: "cursor", Valid: true}}},
+		"PortForwarding":  {row{database.ConnectionKindPortForwarding, "8080"}, want{"port_forwarding", sql.NullString{String: "8080", Valid: true}}},
+		"Tunnel":          {row{database.ConnectionKindTunnel, ""}, want{"tunnel", sql.NullString{}}},
 	}
 
-	ids := make(map[string]uuid.UUID, len(folds))
-	for connType := range folds {
+	ids := make(map[string]uuid.UUID, len(cases))
+	for name, tc := range cases {
 		log := dbgen.ConnectionLog(t, db, database.UpsertConnectionLogParams{
 			OrganizationID:   org.ID,
 			WorkspaceOwnerID: ws.OwnerID,
 			WorkspaceID:      ws.ID,
 			WorkspaceName:    ws.Name,
 			AgentName:        "agent",
-			Type:             connType,
+			Kind:             tc.row.kind,
+			AppNameOrPort:    sql.NullString{String: tc.row.appNameOrPort, Valid: tc.row.appNameOrPort != ""},
 			ConnectionStatus: database.ConnectionStatusConnected,
 			ConnectionID:     uuid.NullUUID{UUID: uuid.New(), Valid: true},
 		})
-		ids[connType] = log.ID
+		ids[name] = log.ID
 	}
 
-	downSQL, err := os.ReadFile("000600_connection_logs_type_text.down.sql")
+	downSQL, err := os.ReadFile("000600_connection_logs_kind_app_name.down.sql")
 	require.NoError(t, err)
 	_, err = sqlDB.ExecContext(ctx, string(downSQL))
 	require.NoError(t, err)
 
-	for connType, want := range folds {
-		var got string
+	for name, tc := range cases {
+		var got want
 		err := sqlDB.QueryRowContext(ctx,
-			`SELECT type::text FROM connection_logs WHERE id = $1`, ids[connType],
-		).Scan(&got)
+			`SELECT type::text, slug_or_port FROM connection_logs WHERE id = $1`, ids[name],
+		).Scan(&got.typ, &got.slugOrPort)
 		require.NoError(t, err)
-		require.Equal(t, want, got, "type %q", connType)
+		require.Equal(t, tc.want, got, name)
 	}
 }

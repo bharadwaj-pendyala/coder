@@ -21632,6 +21632,13 @@ const docTemplate = `{
                 "agent_name": {
                     "type": "string"
                 },
+                "app_display_name": {
+                    "type": "string"
+                },
+                "app_name": {
+                    "description": "AppName is the agent-reported app, such as \"cursor\", or a workspace app\nslug. Empty for port forwarding and tunnels.",
+                    "type": "string"
+                },
                 "connect_time": {
                     "type": "string",
                     "format": "date-time"
@@ -21655,13 +21662,6 @@ const docTemplate = `{
                     ]
                 },
                 "type": {
-                    "description": "Type is the app that connected, such as \"cursor\", or a web\nConnectionType, such as \"port_forwarding\".",
-                    "type": "string"
-                },
-                "type_display_name": {
-                    "type": "string"
-                },
-                "type_family": {
                     "$ref": "#/definitions/codersdk.ConnectionType"
                 },
                 "web_info": {

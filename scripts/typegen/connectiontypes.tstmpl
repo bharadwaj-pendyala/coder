@@ -2,8 +2,7 @@
 
 import type { ConnectionType } from "./typesGenerated";
 
-// Display names of the connection types the `type` filter accepts. Record
-// fails to compile if a ConnectionType has no entry.
+// Labels for the `type` filter. Record requires one per ConnectionType.
 export const connectionTypeDisplayNames: Record<ConnectionType, string> = {
 {{- range $type := . }}
 	{{ $type }}: "{{ $type.DisplayName }}",

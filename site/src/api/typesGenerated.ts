@@ -3699,13 +3699,13 @@ export interface ConnectionLog {
 	readonly workspace_name: string;
 	readonly agent_name: string;
 	readonly ip?: string;
+	readonly type: ConnectionType;
 	/**
-	 * Type is the app that connected, such as "cursor", or a web
-	 * ConnectionType, such as "port_forwarding".
+	 * AppName is the agent-reported app, such as "cursor", or a workspace app
+	 * slug. Empty for port forwarding and tunnels.
 	 */
-	readonly type: string;
-	readonly type_display_name: string;
-	readonly type_family: ConnectionType;
+	readonly app_name: string;
+	readonly app_display_name: string;
 	/**
 	 * WebInfo is only set when `type` is one of:
 	 * - `ConnectionTypePortForwarding`

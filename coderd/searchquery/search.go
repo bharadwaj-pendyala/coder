@@ -113,7 +113,16 @@ func ConnectionLogs(ctx context.Context, db database.Store, query string, apiKey
 		Status:              string(httpapi.ParseCustom(parser, values, "", "status", httpapi.ParseEnum[codersdk.ConnectionLogStatus])),
 	}
 
-	filter.Types, filter.ExcludedTypes = parseConnectionTypes(parser, values, "type")
+	filter.Kind, filter.AppNames, filter.ExcludedAppNames = parseConnectionType(parser, values, "type")
+	filter.AppKinds = appKinds(filter.AppNames)
+	if app := parser.String(values, "", "app"); app != "" {
+		// Agent app names are normalized, while slugs keep their hyphens.
+		filter.AppName = codersdk.NormalizeAppName(app)
+		if kinds := appKinds([]string{filter.AppName}); len(kinds) > 0 {
+			filter.AppKind = string(kinds[0])
+		}
+		filter.AppSlug = strings.ToLower(app)
+	}
 
 	if filter.Username == "me" {
 		filter.UserID = apiKey.UserID
@@ -132,8 +141,13 @@ func ConnectionLogs(ctx context.Context, db database.Store, query string, apiKey
 		WorkspaceOwner:      filter.WorkspaceOwner,
 		WorkspaceOwnerID:    filter.WorkspaceOwnerID,
 		WorkspaceOwnerEmail: filter.WorkspaceOwnerEmail,
-		Types:               filter.Types,
-		ExcludedTypes:       filter.ExcludedTypes,
+		Kind:                filter.Kind,
+		AppNames:            filter.AppNames,
+		AppKinds:            filter.AppKinds,
+		ExcludedAppNames:    filter.ExcludedAppNames,
+		AppName:             filter.AppName,
+		AppKind:             filter.AppKind,
+		AppSlug:             filter.AppSlug,
 		UserID:              filter.UserID,
 		Username:            filter.Username,
 		UserEmail:           filter.UserEmail,
@@ -711,9 +725,23 @@ func parseOrganization(ctx context.Context, db database.Store, parser *httpapi.Q
 	})
 }
 
-// parseConnectionTypes returns the values a `type:` filter matches and
-// excludes.
-func parseConnectionTypes(parser *httpapi.QueryParamParser, vals url.Values, queryParam string) (types, excluded []string) {
+// appKinds returns the app names that are also kinds, which name the app on
+// older rows.
+func appKinds(appNames []string) []database.ConnectionKind {
+	var kinds []database.ConnectionKind
+	for _, name := range appNames {
+		switch kind := database.ConnectionKind(name); kind {
+		case database.ConnectionKindSSH, database.ConnectionKindVSCode,
+			database.ConnectionKindJetBrains, database.ConnectionKindReconnectingPTY:
+			kinds = append(kinds, kind)
+		}
+	}
+	return kinds
+}
+
+// parseConnectionType returns what a `type:` filter matches: a web kind, or
+// the apps of a family. Unknown excludes the known apps.
+func parseConnectionType(parser *httpapi.QueryParamParser, vals url.Values, queryParam string) (kind string, appNames, excludedAppNames []string) {
 	typ := httpapi.ParseCustom(parser, vals, "", queryParam, func(v string) (codersdk.ConnectionType, error) {
 		typ := codersdk.ConnectionType(v)
 		if v != "" && !slices.Contains(codersdk.FilterableConnectionTypes(), typ) {
@@ -721,10 +749,16 @@ func parseConnectionTypes(parser *httpapi.QueryParamParser, vals url.Values, que
 		}
 		return typ, nil
 	})
-	if typ == codersdk.ConnectionTypeUnknown {
-		return nil, codersdk.KnownConnectionLogTypes()
+	switch {
+	case typ == "":
+		return "", nil, nil
+	case typ == codersdk.ConnectionTypeUnknown:
+		return "", nil, codersdk.KnownConnectionAppNames()
+	case typ.IsWeb():
+		return string(typ), nil, nil
+	default:
+		return "", typ.AppNames(), nil
 	}
-	return typ.MatchingTypes(), nil
 }
 
 func parseUser(ctx context.Context, db database.Store, parser *httpapi.QueryParamParser, vals url.Values, queryParam string, actorID uuid.UUID) uuid.UUID {

@@ -1002,19 +1002,22 @@ func ChatRoleActions(role codersdk.ChatRole) []policy.Action {
 	return []policy.Action{}
 }
 
-func ConnectionLogConnectionTypeFromAgentProtoConnectionType(typ agentproto.Connection_Type) (string, error) {
+// ConnectionLogKindFromAgentProtoConnectionType returns the kind and app of an
+// agent connection. The enum holds only families, which are also registered
+// app names.
+func ConnectionLogKindFromAgentProtoConnectionType(typ agentproto.Connection_Type) (kind database.ConnectionKind, appName string, err error) {
 	switch typ {
 	case agentproto.Connection_SSH:
-		return string(codersdk.ConnectionTypeSSH), nil
+		return database.ConnectionKindSSH, string(codersdk.AppFamilySSH), nil
 	case agentproto.Connection_JETBRAINS:
-		return string(codersdk.ConnectionTypeJetBrains), nil
+		return database.ConnectionKindSSH, string(codersdk.AppFamilyJetBrains), nil
 	case agentproto.Connection_VSCODE:
-		return string(codersdk.ConnectionTypeVSCode), nil
+		return database.ConnectionKindSSH, string(codersdk.AppFamilyVSCode), nil
 	case agentproto.Connection_RECONNECTING_PTY:
-		return string(codersdk.ConnectionTypeReconnectingPTY), nil
+		return database.ConnectionKindReconnectingPTY, string(codersdk.AppFamilyReconnectingPTY), nil
 	default:
 		// Also Connection_TYPE_UNSPECIFIED, no mapping.
-		return "", xerrors.Errorf("unknown agent connection type %q", typ)
+		return "", "", xerrors.Errorf("unknown agent connection type %q", typ)
 	}
 }
 

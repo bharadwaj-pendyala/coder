@@ -5429,6 +5429,8 @@ AuthorizationObject can represent a "set" of objects, such as: all workspaces in
 ```json
 {
   "agent_name": "string",
+  "app_display_name": "string",
+  "app_name": "string",
   "connect_time": "2019-08-24T14:15:22Z",
   "id": "497f6eca-6276-4993-bfeb-53cbbbba6f08",
   "ip": "string",
@@ -5444,9 +5446,7 @@ AuthorizationObject can represent a "set" of objects, such as: all workspaces in
     "disconnect_time": "2019-08-24T14:15:22Z",
     "exit_code": 0
   },
-  "type": "string",
-  "type_display_name": "string",
-  "type_family": "ssh",
+  "type": "ssh",
   "web_info": {
     "slug_or_port": "string",
     "status_code": 0,
@@ -5489,14 +5489,14 @@ AuthorizationObject can represent a "set" of objects, such as: all workspaces in
 | Name                       | Type                                                           | Required | Restrictions | Description                                                                                                                          |
 |----------------------------|----------------------------------------------------------------|----------|--------------|--------------------------------------------------------------------------------------------------------------------------------------|
 | `agent_name`               | string                                                         | false    |              |                                                                                                                                      |
+| `app_display_name`         | string                                                         | false    |              |                                                                                                                                      |
+| `app_name`                 | string                                                         | false    |              | App name is the agent-reported app, such as "cursor", or a workspace app slug. Empty for port forwarding and tunnels.                |
 | `connect_time`             | string                                                         | false    |              |                                                                                                                                      |
 | `id`                       | string                                                         | false    |              |                                                                                                                                      |
 | `ip`                       | string                                                         | false    |              |                                                                                                                                      |
 | `organization`             | [codersdk.MinimalOrganization](#codersdkminimalorganization)   | false    |              |                                                                                                                                      |
 | `ssh_info`                 | [codersdk.ConnectionLogSSHInfo](#codersdkconnectionlogsshinfo) | false    |              | Ssh info is set for every other `type`.                                                                                              |
-| `type`                     | string                                                         | false    |              | Type is the app that connected, such as "cursor", or a web ConnectionType, such as "port_forwarding".                                |
-| `type_display_name`        | string                                                         | false    |              |                                                                                                                                      |
-| `type_family`              | [codersdk.ConnectionType](#codersdkconnectiontype)             | false    |              |                                                                                                                                      |
+| `type`                     | [codersdk.ConnectionType](#codersdkconnectiontype)             | false    |              |                                                                                                                                      |
 | `web_info`                 | [codersdk.ConnectionLogWebInfo](#codersdkconnectionlogwebinfo) | false    |              | Web info is only set when `type` is one of: - `ConnectionTypePortForwarding` - `ConnectionTypeWorkspaceApp` - `ConnectionTypeTunnel` |
 | `workspace_id`             | string                                                         | false    |              |                                                                                                                                      |
 | `workspace_name`           | string                                                         | false    |              |                                                                                                                                      |
@@ -5510,6 +5510,8 @@ AuthorizationObject can represent a "set" of objects, such as: all workspaces in
   "connection_logs": [
     {
       "agent_name": "string",
+      "app_display_name": "string",
+      "app_name": "string",
       "connect_time": "2019-08-24T14:15:22Z",
       "id": "497f6eca-6276-4993-bfeb-53cbbbba6f08",
       "ip": "string",
@@ -5525,9 +5527,7 @@ AuthorizationObject can represent a "set" of objects, such as: all workspaces in
         "disconnect_time": "2019-08-24T14:15:22Z",
         "exit_code": 0
       },
-      "type": "string",
-      "type_display_name": "string",
-      "type_family": "ssh",
+      "type": "ssh",
       "web_info": {
         "slug_or_port": "string",
         "status_code": 0,
