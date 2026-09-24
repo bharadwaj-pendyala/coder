@@ -41,9 +41,33 @@ func TestHeadersFromActor(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			require.Equal(t, tc.want, headersFromActor(tc.actor))
+			require.Equal(t, tc.want, headersFromActor(tc.actor, nil))
 		})
 	}
+}
+
+func TestHeadersFromActorUsesConfiguredNames(t *testing.T) {
+	t.Parallel()
+
+	actor := &context.Actor{
+		ID: "user-123",
+		Metadata: recorder.Metadata{
+			"Username": "alice",
+			"Email":    "alice@example.com",
+			"Plan":     "pro",
+		},
+	}
+
+	require.Equal(t, map[string]string{
+		"X-Downstream-User-Id":            "user-123",
+		"X-Downstream-Username":           "alice",
+		"X-Downstream-Email":              "alice@example.com",
+		"X-AI-Bridge-Actor-Metadata-Plan": "pro",
+	}, headersFromActor(actor, map[string]string{
+		"id":       "X-Downstream-User-Id",
+		"username": "X-Downstream-Username",
+		"email":    "X-Downstream-Email",
+	}))
 }
 
 func TestHeadersFromActorOmitsMissingEmail(t *testing.T) {
@@ -51,5 +75,5 @@ func TestHeadersFromActorOmitsMissingEmail(t *testing.T) {
 
 	require.Equal(t, map[string]string{
 		ActorIDHeader(): "user-123",
-	}, headersFromActor(&context.Actor{ID: "user-123"}))
+	}, headersFromActor(&context.Actor{ID: "user-123"}, nil))
 }

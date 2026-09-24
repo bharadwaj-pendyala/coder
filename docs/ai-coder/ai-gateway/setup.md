@@ -102,12 +102,19 @@ Each [standalone gateway](./standalone.md) replica accepts the same API dump set
 
 Enable `send_actor_headers` to add authenticated actor identity to intercepted upstream requests.
 
+Configure the header names with `--ai-gateway-actor-header-names`, `CODER_AI_GATEWAY_ACTOR_HEADER_NAMES`, or `ai_gateway.actor_header_names`.
+
 ```yaml
 ai_gateway:
   send_actor_headers: true
+  actor_header_names:
+    id: X-AI-Bridge-Actor-ID
+    username: X-AI-Bridge-Actor-Metadata-Username
+    email: X-AI-Bridge-Actor-Metadata-Email
 ```
 
-For the values sent in each header, refer to [Actor header forwarding](./reference.md#actor-header-forwarding).
+The flag and environment variable use the same map keys and values as the YAML setting.
+For defaults, overrides, and the values sent in each header, refer to [Actor header forwarding](./reference.md#actor-header-forwarding).
 
 ## Data Retention
 

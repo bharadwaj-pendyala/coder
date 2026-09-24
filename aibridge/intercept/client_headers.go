@@ -107,7 +107,10 @@ func BuildUpstreamHeaders(sdkHeader http.Header, clientHeaders http.Header, auth
 	for _, name := range []string{ActorIDHeader(), ActorMetadataHeader("Username"), ActorMetadataHeader("Email")} {
 		headers.Del(name)
 	}
-	for name, value := range headersFromActor(actor) {
+	for _, name := range resolvedActorHeaderNames(cfg.ActorHeaderNames) {
+		headers.Del(name)
+	}
+	for name, value := range headersFromActor(actor, cfg.ActorHeaderNames) {
 		headers.Set(name, value)
 	}
 	return headers

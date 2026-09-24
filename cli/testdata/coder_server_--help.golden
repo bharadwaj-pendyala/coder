@@ -127,6 +127,12 @@ AI GATEWAY OPTIONS:
           named after the provider. Sensitive headers are redacted. Leave empty
           to disable.
 
+      --ai-gateway-actor-header-names struct[map[string]string], $CODER_AI_GATEWAY_ACTOR_HEADER_NAMES (default: {})
+          Map id, username, and email to upstream header names. Omitted entries
+          use X-Ai-Bridge-Actor-Id, X-Ai-Bridge-Actor-Metadata-Username, and
+          X-Ai-Bridge-Actor-Metadata-Email. Requires send actor headers to be
+          enabled.
+
       --ai-gateway-allow-byok bool, $CODER_AI_GATEWAY_ALLOW_BYOK (default: true)
           Allow users to provide their own LLM API keys or subscriptions. When
           disabled, only centralized key authentication is permitted.
@@ -152,8 +158,9 @@ AI GATEWAY OPTIONS:
 
       --ai-gateway-send-actor-headers bool, $CODER_AI_GATEWAY_SEND_ACTOR_HEADERS (default: false)
           Add the authenticated user's ID, username, and email to intercepted
-          upstream requests. Email is personal information; enable only for
-          trusted upstream providers.
+          upstream requests. Header names can be changed with the actor header
+          names setting. Email is personal information; enable only for trusted
+          upstream providers.
 
       --ai-gateway-structured-logging bool, $CODER_AI_GATEWAY_STRUCTURED_LOGGING (default: false)
           Emit structured logs for AI Gateway interception records. Use this for

@@ -892,8 +892,9 @@ aibridge:
   structured_logging: false
   # Deprecated: use --ai-gateway-send-actor-headers or
   # CODER_AI_GATEWAY_SEND_ACTOR_HEADERS instead. Add the authenticated user's ID,
-  # username, and email to intercepted upstream requests. Email is personal
-  # information; enable only for trusted upstream providers.
+  # username, and email to intercepted upstream requests. Header names can be
+  # changed with the actor header names setting. Email is personal information;
+  # enable only for trusted upstream providers.
   # (default: false, type: bool)
   send_actor_headers: false
   # Deprecated: use --ai-gateway-allow-byok or CODER_AI_GATEWAY_ALLOW_BYOK instead.
@@ -955,10 +956,15 @@ ai_gateway:
   # (default: false, type: bool)
   structured_logging: false
   # Add the authenticated user's ID, username, and email to intercepted upstream
-  # requests. Email is personal information; enable only for trusted upstream
-  # providers.
+  # requests. Header names can be changed with the actor header names setting. Email
+  # is personal information; enable only for trusted upstream providers.
   # (default: false, type: bool)
   send_actor_headers: false
+  # Map id, username, and email to upstream header names. Omitted entries use
+  # X-Ai-Bridge-Actor-Id, X-Ai-Bridge-Actor-Metadata-Username, and
+  # X-Ai-Bridge-Actor-Metadata-Email. Requires send actor headers to be enabled.
+  # (default: {}, type: struct[map[string]string])
+  actor_header_names: {}
   # Base directory for dumping AI Gateway request/response pairs to disk for
   # debugging. When set, each provider writes under a subdirectory named after the
   # provider. Sensitive headers are redacted. Leave empty to disable.

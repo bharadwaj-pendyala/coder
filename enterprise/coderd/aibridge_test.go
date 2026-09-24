@@ -1702,7 +1702,7 @@ func TestAIBridgeRouting(t *testing.T) {
 	}
 }
 
-func TestAIBridgeActorHeaders(t *testing.T) {
+func TestAIBridgeActorHeaderNames(t *testing.T) {
 	t.Parallel()
 
 	ctx := testutil.Context(t, testutil.WaitLong)
@@ -1761,6 +1761,11 @@ func TestAIBridgeActorHeaders(t *testing.T) {
 	dv := coderdtest.DeploymentValues(t)
 	dv.AI.BridgeConfig.Enabled = serpent.Bool(true)
 	dv.AI.BridgeConfig.SendActorHeaders = serpent.Bool(true)
+	dv.AI.BridgeConfig.ActorHeaderNames = serpent.Struct[map[string]string]{Value: map[string]string{
+		"id":       "X-Downstream-User-Id",
+		"username": "X-Downstream-Username",
+		"email":    "X-Downstream-Email",
+	}}
 
 	firstClient, _, api, firstUserResponse := coderdenttest.NewWithAPI(t, &coderdenttest.Options{
 		Options: &coderdtest.Options{DeploymentValues: dv},
@@ -1793,6 +1798,9 @@ func TestAIBridgeActorHeaders(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Trace-ID", traceID)
 		req.Header.Set("X-Client-Arbitrary", "preserve-me")
+		req.Header.Set("X-Downstream-User-Id", "spoofed-id")
+		req.Header.Set("X-Downstream-Username", "spoofed-username")
+		req.Header.Set("X-Downstream-Email", "spoofed-email")
 		req.Header.Set("X-AI-Bridge-Actor-ID", "spoofed-default-id")
 		req.Header.Set("X-AI-Bridge-Actor-Metadata-Username", "spoofed-default-username")
 		req.Header.Set("X-AI-Bridge-Actor-Metadata-Email", "spoofed-default-email")
@@ -1824,9 +1832,12 @@ func TestAIBridgeActorHeaders(t *testing.T) {
 		require.Equal(t, expectedKeys[i], strings.TrimPrefix(request.header.Get(expectedKeyHeader), "Bearer "), "request %d upstream credential", i)
 		require.Equal(t, []string{"messages-trace", "chat-first-trace", "chat-second-trace", "responses-trace"}[i], request.header.Get("X-Trace-Id"))
 		require.Equal(t, "preserve-me", request.header.Get("X-Client-Arbitrary"))
-		require.Equal(t, expectedUsers[i].ID.String(), request.header.Get("X-AI-Bridge-Actor-ID"))
-		require.Equal(t, expectedUsers[i].Username, request.header.Get("X-AI-Bridge-Actor-Metadata-Username"))
-		require.Equal(t, expectedUsers[i].Email, request.header.Get("X-AI-Bridge-Actor-Metadata-Email"))
+		require.Equal(t, expectedUsers[i].ID.String(), request.header.Get("X-Downstream-User-Id"))
+		require.Equal(t, expectedUsers[i].Username, request.header.Get("X-Downstream-Username"))
+		require.Equal(t, expectedUsers[i].Email, request.header.Get("X-Downstream-Email"))
+		require.Empty(t, request.header.Get("X-AI-Bridge-Actor-ID"))
+		require.Empty(t, request.header.Get("X-AI-Bridge-Actor-Metadata-Username"))
+		require.Empty(t, request.header.Get("X-AI-Bridge-Actor-Metadata-Email"))
 	}
 }
 

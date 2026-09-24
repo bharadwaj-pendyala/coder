@@ -73,7 +73,13 @@ When enabled, AI Gateway emits these headers by default:
 | `username` | `X-AI-Bridge-Actor-Metadata-Username` | The username from the authenticated Coder account.      |
 | `email`    | `X-AI-Bridge-Actor-Metadata-Email`    | The email address from the authenticated Coder account. |
 
+Configure `--ai-gateway-actor-header-names`, `CODER_AI_GATEWAY_ACTOR_HEADER_NAMES`, or `ai_gateway.actor_header_names` as a map from `id`, `username`, and `email` to header names.
+Each configured name replaces that key's default header rather than adding an alias.
+Omitted keys keep their defaults.
+An empty, duplicate, or protected header name is rejected.
+
 AI Gateway uses values from the authenticated Coder account, not client-supplied headers.
+Remapped actor headers remain protected from ordinary client header forwarding.
 Regular Coder users must have an email address.
 Service accounts have no email address, so AI Gateway omits the email header for them.
 The user ID is stable for the account, while an email address can change.

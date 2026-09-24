@@ -26,6 +26,7 @@ type Anthropic struct {
 	APIDumpDir       string
 	CircuitBreaker   *CircuitBreaker
 	SendActorHeaders bool
+	ActorHeaderNames map[string]string
 }
 
 // BedrockProtocol selects which AWS Bedrock wire protocol a provider targets.
@@ -138,6 +139,7 @@ type OpenAI struct {
 	APIDumpDir       string
 	CircuitBreaker   *CircuitBreaker
 	SendActorHeaders bool
+	ActorHeaderNames map[string]string
 }
 
 type Copilot struct {
@@ -147,6 +149,7 @@ type Copilot struct {
 	APIDumpDir       string
 	CircuitBreaker   *CircuitBreaker
 	SendActorHeaders bool
+	ActorHeaderNames map[string]string
 }
 
 // CircuitBreaker holds configuration for circuit breakers.
