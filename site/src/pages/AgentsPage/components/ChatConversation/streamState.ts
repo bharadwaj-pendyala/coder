@@ -1,6 +1,10 @@
 import type * as TypesGen from "#/api/typesGenerated";
 import { appendTextBlock } from "./blockUtils";
-import { ensureToolBlock, parseToolResultIsError } from "./messageParsing";
+import {
+	ensureToolBlock,
+	isHiddenProviderExecutedPart,
+	parseToolResultIsError,
+} from "./messageParsing";
 import { mergeStreamPayload } from "./streamingJson";
 import type { MergedTool, RenderBlock, StreamState } from "./types";
 
@@ -42,10 +46,7 @@ export const applyMessagePartToStreamState = (
 			};
 		}
 		case "tool-call": {
-			// Provider-executed tool calls (e.g. web_search) are
-			// handled natively by the provider — skip rendering them
-			// as tool cards.
-			if (part.provider_executed) {
+			if (isHiddenProviderExecutedPart(part)) {
 				return prev;
 			}
 			const existingByName = Object.values(nextState.toolCalls).find(
@@ -90,8 +91,7 @@ export const applyMessagePartToStreamState = (
 			};
 		}
 		case "tool-result": {
-			// Skip synthetic results for provider-executed tools.
-			if (part.provider_executed) {
+			if (isHiddenProviderExecutedPart(part)) {
 				return prev;
 			}
 			const existingByName = Object.values(nextState.toolResults).find(
