@@ -219,10 +219,23 @@ func TestConnectionLogKind(t *testing.T) {
 			wantApp:  "vs_code",
 		},
 		{
-			name:     "FallsBackToEnum",
+			name:     "OlderAgentFallsBackToEnum",
 			typ:      agentproto.Connection_JETBRAINS,
 			wantKind: database.ConnectionKindSSH,
 			wantApp:  "jetbrains",
+		},
+		{
+			name:     "OlderAgentWebTerminal",
+			typ:      agentproto.Connection_RECONNECTING_PTY,
+			wantKind: database.ConnectionKindReconnectingPTY,
+			wantApp:  "reconnecting_pty",
+		},
+		{
+			// Older agents sent this for apps outside the enum.
+			name:     "NoAppNameOrEnum",
+			typ:      agentproto.Connection_TYPE_UNSPECIFIED,
+			wantKind: database.ConnectionKindSSH,
+			wantApp:  "unknown",
 		},
 		{
 			name:     "WebTerminal",
@@ -236,20 +249,12 @@ func TestConnectionLogKind(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			kind, appName, err := db2sdk.ConnectionLogKindFromAgentProto(&agentproto.Connection{
+			kind, appName := db2sdk.ConnectionLogKindFromAgentProto(&agentproto.Connection{
 				AppName: tt.appName,
 				Type:    tt.typ,
 			})
-			require.NoError(t, err)
 			require.Equal(t, tt.wantKind, kind)
 			require.Equal(t, tt.wantApp, appName)
 		})
 	}
-
-	t.Run("NoAppNameOrEnum", func(t *testing.T) {
-		t.Parallel()
-
-		_, _, err := db2sdk.ConnectionLogKindFromAgentProto(&agentproto.Connection{})
-		require.Error(t, err)
-	})
 }

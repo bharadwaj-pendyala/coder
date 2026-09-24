@@ -30,7 +30,6 @@ import (
 	"github.com/coder/coder/v2/coderd/workspaceapps/appurl"
 	"github.com/coder/coder/v2/coderd/x/chatd/chatprompt"
 	"github.com/coder/coder/v2/codersdk"
-	"github.com/coder/coder/v2/codersdk/agentsdk"
 	"github.com/coder/coder/v2/provisionersdk/proto"
 	"github.com/coder/coder/v2/tailnet"
 	previewtypes "github.com/coder/preview/types"
@@ -1003,19 +1002,19 @@ func ChatRoleActions(role codersdk.ChatRole) []policy.Action {
 	return []policy.Action{}
 }
 
-// ConnectionLogKindFromAgentProto returns the kind and app of an agent
-// connection. An agent that sends no app name reports only a family, which is
-// also a registered app name.
-func ConnectionLogKindFromAgentProto(conn *agentproto.Connection) (kind database.ConnectionKind, appName string, err error) {
-	kind = database.ConnectionKindSSH
+// ConnectionLogKindFromAgentProto returns the kind and app name of an agent
+// connection. Without app_name, the family is the app name.
+func ConnectionLogKindFromAgentProto(conn *agentproto.Connection) (database.ConnectionKind, string) {
+	kind := database.ConnectionKindSSH
 	if conn.GetType() == agentproto.Connection_RECONNECTING_PTY {
 		kind = database.ConnectionKindReconnectingPTY
 	}
-	if appName := conn.GetAppName(); appName != "" {
-		return kind, codersdk.NormalizeAppName(appName), nil
+	appName := conn.GetAppName()
+	if appName == "" && conn.GetType() != agentproto.Connection_TYPE_UNSPECIFIED {
+		appName = strings.ToLower(conn.GetType().String())
 	}
-	family, err := agentsdk.AppFamilyFromProto(conn.GetType())
-	return kind, string(family), err
+	// An empty name normalizes to unknown.
+	return kind, codersdk.NormalizeAppName(appName)
 }
 
 func ConnectionLogStatusFromAgentProtoConnectionAction(action agentproto.Connection_Action) (database.ConnectionStatus, error) {

@@ -88,13 +88,10 @@ import (
 //
 // API v2.12:
 //   - Added the client_session_id to TelemetryEvent.
-//
-// API v2.13:
-//   - Added app_name to Connection on the Agent API, deprecating the type
-//     enum.
+//   - Added app_name to Connection on the Agent API.
 const (
 	CurrentMajor = 2
-	CurrentMinor = 13
+	CurrentMinor = 12
 )
 
 var CurrentVersion = apiversion.New(CurrentMajor, CurrentMinor)

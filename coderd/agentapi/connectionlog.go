@@ -40,10 +40,7 @@ func (a *ConnLogAPI) ReportConnection(ctx context.Context, req *agentproto.Repor
 	if err != nil {
 		return nil, err
 	}
-	kind, appName, err := db2sdk.ConnectionLogKindFromAgentProto(req.GetConnection())
-	if err != nil {
-		return nil, err
-	}
+	kind, appName := db2sdk.ConnectionLogKindFromAgentProto(req.GetConnection())
 
 	var code sql.NullInt32
 	if action == database.ConnectionStatusDisconnected {
