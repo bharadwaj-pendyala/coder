@@ -238,6 +238,22 @@ func TestBuildUpstreamHeaders(t *testing.T) {
 		require.Equal(t, clientCopy, clientHeaders)
 	})
 
+	t.Run("missing actor email does not reuse SDK header", func(t *testing.T) {
+		t.Parallel()
+
+		result := intercept.BuildUpstreamHeaders(http.Header{"X-Ai-Bridge-Actor-Metadata-Email": {"sdk-email"}}, http.Header{"X-Ai-Bridge-Actor-Metadata-Email": {"client-email"}}, "Authorization", intercept.Config{
+			SendActorHeaders: true,
+		}, &context.Actor{ID: "user-123"})
+		require.Empty(t, result.Get(intercept.ActorMetadataHeader("Email")))
+	})
+
+	t.Run("actor forwarding off preserves SDK actor headers", func(t *testing.T) {
+		t.Parallel()
+
+		result := intercept.BuildUpstreamHeaders(http.Header{intercept.ActorIDHeader(): {"sdk-actor"}}, nil, "Authorization", intercept.Config{}, nil)
+		require.Equal(t, "sdk-actor", result.Get(intercept.ActorIDHeader()))
+	})
+
 	t.Run("authenticated actor overrides client and SDK values", func(t *testing.T) {
 		t.Parallel()
 

@@ -45,3 +45,11 @@ func TestHeadersFromActor(t *testing.T) {
 		})
 	}
 }
+
+func TestHeadersFromActorOmitsMissingEmail(t *testing.T) {
+	t.Parallel()
+
+	require.Equal(t, map[string]string{
+		ActorIDHeader(): "user-123",
+	}, headersFromActor(&context.Actor{ID: "user-123"}))
+}

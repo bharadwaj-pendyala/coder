@@ -36,6 +36,9 @@ func headersFromActor(actor *context.Actor) map[string]string {
 
 	// Add headers for provided metadata.
 	for k, v := range actor.Metadata {
+		if k == "Email" && fmt.Sprintf("%v", v) == "" {
+			continue
+		}
 		headers[ActorMetadataHeader(k)] = fmt.Sprintf("%v", v)
 	}
 

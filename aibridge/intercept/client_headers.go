@@ -94,10 +94,21 @@ func BuildUpstreamHeaders(sdkHeader http.Header, clientHeaders http.Header, auth
 		headers.Set(authHeaderName, v)
 	}
 
-	if cfg.SendActorHeaders {
-		for name, value := range headersFromActor(actor) {
-			headers.Set(name, value)
+	if !cfg.SendActorHeaders {
+		// Preserve actor headers injected by other SDK options when actor forwarding is off.
+		for name, values := range sdkHeader {
+			if IsActorHeader(name) {
+				headers[http.CanonicalHeaderKey(name)] = append([]string(nil), values...)
+			}
 		}
+		return headers
+	}
+
+	for _, name := range []string{ActorIDHeader(), ActorMetadataHeader("Username"), ActorMetadataHeader("Email")} {
+		headers.Del(name)
+	}
+	for name, value := range headersFromActor(actor) {
+		headers.Set(name, value)
 	}
 	return headers
 }

@@ -98,6 +98,17 @@ Each [standalone gateway](./standalone.md) replica accepts the same API dump set
 > information such as prompts, completions, and tool inputs. Protect the target
 > directory and disable dumping when diagnostics are complete.
 
+## Send actor headers
+
+Enable `send_actor_headers` to add authenticated actor identity to intercepted upstream requests.
+
+```yaml
+ai_gateway:
+  send_actor_headers: true
+```
+
+For the values sent in each header, refer to [Actor header forwarding](./reference.md#actor-header-forwarding).
+
 ## Data Retention
 
 AI Gateway records prompts, token usage, tool invocations, and model reasoning for auditing and

@@ -142,10 +142,11 @@ type OpenAI struct {
 
 type Copilot struct {
 	// Name is the provider instance name. If empty, defaults to "copilot".
-	Name           string
-	BaseURL        string
-	APIDumpDir     string
-	CircuitBreaker *CircuitBreaker
+	Name             string
+	BaseURL          string
+	APIDumpDir       string
+	CircuitBreaker   *CircuitBreaker
+	SendActorHeaders bool
 }
 
 // CircuitBreaker holds configuration for circuit breakers.
